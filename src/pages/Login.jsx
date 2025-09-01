@@ -11,7 +11,8 @@ const Login = () => {
   const [enteredPin, setEnteredPin] = useState("");
   const navigate = useNavigate();
 
-  const ADMIN_PIN = "8765";
+  const ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN
+
 
   const handleLogin = async () => {
     try {

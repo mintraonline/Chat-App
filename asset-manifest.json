@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/Chat-App/static/css/main.74b3758f.css",
-    "main.js": "/Chat-App/static/js/main.54e30013.js",
-    "static/js/488.6e813ea7.chunk.js": "/Chat-App/static/js/488.6e813ea7.chunk.js",
-    "service-worker.js": "/Chat-App/service-worker.js",
-    "index.html": "/Chat-App/index.html",
-    "main.74b3758f.css.map": "/Chat-App/static/css/main.74b3758f.css.map",
-    "main.54e30013.js.map": "/Chat-App/static/js/main.54e30013.js.map",
-    "488.6e813ea7.chunk.js.map": "/Chat-App/static/js/488.6e813ea7.chunk.js.map"
+    "main.css": "/static/css/main.74b3758f.css",
+    "main.js": "/static/js/main.d0f28681.js",
+    "static/js/488.6e813ea7.chunk.js": "/static/js/488.6e813ea7.chunk.js",
+    "service-worker.js": "/service-worker.js",
+    "index.html": "/index.html",
+    "main.74b3758f.css.map": "/static/css/main.74b3758f.css.map",
+    "main.d0f28681.js.map": "/static/js/main.d0f28681.js.map",
+    "488.6e813ea7.chunk.js.map": "/static/js/488.6e813ea7.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.74b3758f.css",
-    "static/js/main.54e30013.js"
+    "static/js/main.d0f28681.js"
   ]
 }

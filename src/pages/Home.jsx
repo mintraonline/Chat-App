@@ -65,6 +65,7 @@ const Home = () => {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [modalMedia, setModalMedia] = useState(null);
   const [uploadError, setUploadError] = useState(null);
+  const [chatLoaded, setChatLoaded] = useState(false);
 
   const fileInputRef = useRef(null);
   const chatBodyRef = useRef(null);
@@ -117,17 +118,24 @@ const Home = () => {
     loadFFmpeg();
   }, []);
 
-  useEffect(() => {
-    const filtered = allUsers.filter((user) =>
-      user.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+useEffect(() => {
+  const filtered = allUsers.filter((user) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      user?.username?.toLowerCase()?.includes(search) ||
+      user?.displayName?.toLowerCase()?.includes(search)
     );
-    const sorted = filtered.sort((a, b) => {
-      const aLast = lastMessageMap[a.uid] || 0;
-      const bLast = lastMessageMap[b.uid] || 0;
-      return bLast - aLast;
-    });
-    setUsers(sorted);
-  }, [searchTerm, allUsers, lastMessageMap]);
+  });
+
+  const sorted = filtered.sort((a, b) => {
+    const aLast = lastMessageMap[a.uid] || 0;
+    const bLast = lastMessageMap[b.uid] || 0;
+    return bLast - aLast;
+  });
+
+  setUsers(sorted);
+}, [searchTerm, allUsers, lastMessageMap]);
+
 
   useEffect(() => {
     const unsubscribes = [];
@@ -180,17 +188,29 @@ const Home = () => {
   };
 
   useEffect(() => {
-    if (!selectedUser) return;
+    if (!selectedUser?.uid || !currentUser?.uid) return;
+
+    setChatLoaded(false); // Prevent flicker
     const combinedId =
       currentUser.uid > selectedUser.uid
         ? currentUser.uid + selectedUser.uid
         : selectedUser.uid + currentUser.uid;
 
-    const unsub = onSnapshot(doc(db, "chats", combinedId), (docSnap) => {
-      docSnap.exists() && setChats(docSnap.data().messages || []);
+    const chatRef = doc(db, "chats", combinedId);
+
+    const unsub = onSnapshot(chatRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setChats(docSnap.data().messages || []);
+        setChatLoaded(true);
+      } else {
+        // No chat yet
+        setChats([]);
+        setChatLoaded(true);
+      }
     });
+
     return () => unsub();
-  }, [selectedUser?.uid, currentUser.uid]);
+  }, [selectedUser?.uid, currentUser?.uid]);
 
   const handleSelectUser = async (user) => {
     setSelectedUser(user);
@@ -717,8 +737,8 @@ const handleOpenModal = async () => {
             <div className="overlay-icon">⚠️</div>
             <h2>File Too Large</h2>
             <p>
-              The selected file exceeds the 100 MB limit. Please choose a smaller
-              file.
+              The selected file exceeds the 100 MB limit. Please choose a
+              smaller file.
             </p>
             <button onClick={() => setShowFileSizeError(false)}>OK</button>
           </div>
@@ -735,7 +755,7 @@ const handleOpenModal = async () => {
           </div>
         </div>
       )}
-      
+
       {!isMobile() && (
         <div className="sidebar">
           <div className="sidebar-header">
@@ -744,7 +764,7 @@ const handleOpenModal = async () => {
           <div className="logged-in-user">
             <div className="user-info">
               <div className="avatar">
-                {currentUser?.displayName?.[0]?.toUpperCase() || "U"}
+                {currentUser?.displayName[0]?.toUpperCase() || "A"}
               </div>
               <div className="user-details">
                 <div className="user-names">
@@ -874,7 +894,7 @@ const handleOpenModal = async () => {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {currentUser?.displayName}
+                  {currentUser?.username}
                 </div>
                 <div
                   style={{
@@ -886,34 +906,35 @@ const handleOpenModal = async () => {
                     marginTop: "2px",
                   }}
                 >
-                  {currentUser?.email}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    marginTop: "4px",
-                  }}
-                >
+                  {currentUser?.displayName || ''}
                   <span
                     style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      backgroundColor: "#4caf50",
-                      display: "inline-block",
-                      flexShrink: 0,
-                    }}
-                  ></span>
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "#4caf50",
-                      fontWeight: "bold",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginLeft: currentUser?.displayName.length > 0 ? "10px" : '0px',
+                      marginTop: "4px",
                     }}
                   >
-                    Online
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        backgroundColor: "#4caf50",
+                        display: "inline-block",
+                        flexShrink: 0,
+                        marginRight: "3px",
+                      }}
+                    ></span>
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "#4caf50",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Online
+                    </span>
                   </span>
                 </div>
               </div>
@@ -929,6 +950,7 @@ const handleOpenModal = async () => {
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
+                marginRight: "40px",
               }}
             >
               <FiLogOut size={22} color="#fff" />
@@ -1018,7 +1040,7 @@ const handleOpenModal = async () => {
                       fontSize: "18px",
                     }}
                   >
-                    {user.displayName?.charAt(0)?.toUpperCase() || "U"}
+                    {user.username?.charAt(0)?.toUpperCase() || "U"}
                   </div>
                   <div
                     style={{
@@ -1032,7 +1054,7 @@ const handleOpenModal = async () => {
                       color: "#333",
                     }}
                   >
-                    {user.displayName}
+                    {user.username}
                   </div>
                 </div>
                 <div
@@ -1058,7 +1080,7 @@ const handleOpenModal = async () => {
                         height: 10,
                         borderRadius: "50%",
                         backgroundColor: user.isOnline ? "#4caf50" : "#9e9e9e",
-                        display: "inline-block",
+                        // display: "inline-block",
                         flexShrink: 0,
                       }}
                     ></span>
@@ -1098,8 +1120,21 @@ const handleOpenModal = async () => {
         </div>
       )}
       <div className="chat-window">
+        {/* --- CHAT HEADER --- */}
         <div className="chat-header">
-          {selectedUser ? (
+          {!chatLoaded ? (
+            <h3
+              className="chat-select-title"
+              style={{
+                textAlign: "center",
+                padding: "20px",
+                color: "#888",
+                fontSize: "16px",
+              }}
+            >
+              Loading chat...
+            </h3>
+          ) : selectedUser ? (
             <div
               className="chat-header-content"
               style={{
@@ -1131,9 +1166,10 @@ const handleOpenModal = async () => {
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
                     overflow: "hidden",
                     gap: "2px",
+                    justifyContent:'center',
+                    alignItems:'center',
                   }}
                 >
                   <h3
@@ -1149,7 +1185,10 @@ const handleOpenModal = async () => {
                       gap: "6px",
                     }}
                   >
-                    {selectedUser.displayName}
+                    {/* ✅ Use username if available */}
+                    {selectedUser.username || selectedUser.displayName}
+                  </h3>
+                  <div>
                     <span
                       style={{
                         width: 8,
@@ -1159,17 +1198,21 @@ const handleOpenModal = async () => {
                           ? "#4caf50"
                           : "#9e9e9e",
                         display: "inline-block",
+                        marginLeft:'8px'
                       }}
                     ></span>
-                  </h3>
-                  <small
-                    style={{
-                      color: selectedUser.isOnline ? "#4caf50" : "#9e9e9e",
-                      fontSize: "11px",
-                    }}
-                  >
-                    {selectedUser.isOnline ? "Online" : "Offline"}
-                  </small>
+                    <small
+                      style={{
+                        color: selectedUser.isOnline ? "#4caf50" : "#9e9e9e",
+                        fontSize: "11px",
+                        display: "inline-block",
+                        marginLeft:'2px',
+                        marginBottom:'7px'
+                      }}
+                    >
+                      {selectedUser.isOnline ? "Online" : "Offline"}
+                    </small>
+                  </div>
                 </div>
               </div>
 
@@ -1178,6 +1221,7 @@ const handleOpenModal = async () => {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  marginRight: "25px",
                 }}
               >
                 <button
@@ -1216,47 +1260,71 @@ const handleOpenModal = async () => {
           )}
         </div>
 
-        <div
-          className="mobile-chat-container"
-          style={{ display: "flex", flexDirection: "column", height: "85%" }}
-        >
-          <div className="chat-body scrollable-chat-body" ref={chatBodyRef}>
-            {chats.map((msg) => (
-              <div
-                key={msg.id}
-                className={`chat-message ${
-                  msg.senderId === currentUser.uid ? "sent" : "received"
-                }`}
-              >
-                <div className="message-content">
-                  <div className="message-header">
-                    <span className="message-sender">
-                      {msg.senderId === currentUser.uid
-                        ? currentUser.displayName || "You"
-                        : selectedUser?.displayName || ""}
-                    </span>
-                    <span className="message-time">
-                      {msg.date &&
-                        (new Date().getTime() - msg.date.seconds * 1000 >
-                        24 * 60 * 60 * 1000
-                          ? getFormattedTime(msg.date)
-                          : new Date(
-                              msg.date.seconds * 1000
-                            ).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true,
-                            }))}
-                    </span>
-                  </div>
-                  {renderMediaContent(msg)}
-                  {msg.text && <div className="message-text">{msg.text}</div>}
+        {/* --- CHAT BODY --- */}
+        {chatLoaded && selectedUser && (
+          <div
+            className="mobile-chat-container"
+            style={{ display: "flex", flexDirection: "column", height: "85%" }}
+          >
+            <div className="chat-body scrollable-chat-body" ref={chatBodyRef}>
+              {chats.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px",
+                    color: "#aaa",
+                    fontSize: "14px",
+                  }}
+                >
+                  No messages yet. Start the conversation 👋
                 </div>
-              </div>
-            ))}
+              ) : (
+                chats.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`chat-message ${
+                      msg.senderId === currentUser.uid ? "sent" : "received"
+                    }`}
+                  >
+                    <div className="message-content">
+                      <div className="message-header">
+                        <span className="message-sender">
+                          {msg.senderId === currentUser.uid
+                            ? currentUser.username ||
+                              currentUser.displayName ||
+                              "You"
+                            : selectedUser?.username ||
+                              selectedUser?.displayName ||
+                              ""}
+                        </span>
+                        <span className="message-time">
+                          {msg.date &&
+                            (new Date().getTime() - msg.date.seconds * 1000 >
+                            24 * 60 * 60 * 1000
+                              ? getFormattedTime(msg.date)
+                              : new Date(
+                                  msg.date.seconds * 1000
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                }))}
+                        </span>
+                      </div>
+                      {renderMediaContent(msg)}
+                      {msg.text && (
+                        <div className="message-text">{msg.text}</div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-        {selectedUser && (
+        )}
+
+        {/* --- CHAT INPUT --- */}
+        {selectedUser && chatLoaded && (
           <div className="chat-input-wrapper">
             {mediaPreview && (
               <div className="media-preview">
@@ -1267,7 +1335,6 @@ const handleOpenModal = async () => {
                     className="preview-image"
                   />
                 )}
-
                 {mediaType === "video" && (
                   <video
                     src={mediaPreview}
@@ -1276,7 +1343,11 @@ const handleOpenModal = async () => {
                   />
                 )}
                 {mediaType === "audio" && (
-                  <audio src={mediaPreview} controls className="preview-audio" />
+                  <audio
+                    src={mediaPreview}
+                    controls
+                    className="preview-audio"
+                  />
                 )}
                 {["pdf", "office", "file"].includes(mediaType) && (
                   <div className="preview-file">
@@ -1288,7 +1359,6 @@ const handleOpenModal = async () => {
                     </span>
                   </div>
                 )}
-
                 <button className="remove-media-btn" onClick={removeMedia}>
                   <IoMdClose size={16} />
                 </button>
@@ -1335,6 +1405,7 @@ const handleOpenModal = async () => {
           </div>
         )}
       </div>
+
       <MediaModal
         isOpen={showMediaModal}
         onClose={() => setShowMediaModal(false)}

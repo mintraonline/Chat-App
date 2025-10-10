@@ -9,22 +9,47 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
   const navigate = useNavigate();
+  const isValidUsername = (name) => /^(?=.*\d)[A-Za-z\d]{3,7}$/.test(name);
 
   const handleRegister = async () => {
     try {
+      if (!username || !email || !password) {
+        alert("Username, Email, and Password are mandatory.");
+        return;
+      }
+
+      if (!isValidUsername(username)) {
+        alert("Username must be 3–7 characters, alphanumeric, and contain at least one number.");
+        return;
+      }
+
       const res = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(res.user, {
-        displayName: username,
-      });
+
+      const displayName =
+        firstName || lastName
+          ? `${firstName || ""} ${lastName || ""}`.trim()
+          : '';
+
+      await updateProfile(res.user, { displayName });
+
       await setDoc(doc(db, "users", res.user.uid), {
         uid: res.user.uid,
-        displayName: username,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        username,
+        displayName,
         email: res.user.email,
+        createdAt: new Date(),
+        isOnline: true,
       });
+
       navigate("/");
     } catch (err) {
-      console.error(err);
+      console.error("Registration failed:", err);
       alert("Registration failed. Try again.");
     }
   };
@@ -45,6 +70,22 @@ const Register = () => {
           onChange={(e) => setUsername(e.target.value)}
           className="register-input"
         />
+        <input
+          type="text"
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="register-input"
+        />
+
+        <input
+          type="text"
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="register-input"
+        />
+        
         <input
           type="email"
           placeholder="Email"
